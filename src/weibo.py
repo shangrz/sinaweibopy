@@ -195,5 +195,41 @@ class APIClient(object):
     def is_expires(self):
         return not self.access_token or time.time() > self.expires
 
+    def imitateLogin(self, username, password):
+        '''
+        imitate enter username and password for authorization,  get code and  request_access_token(code)
+        '''
+        AUTH_URL = self.auth_url+'authorize'
+        referer_url = self.get_authorize_url()
+        cookies = urllib2.HTTPCookieProcessor()
+        opener = urllib2.build_opener(cookies)
+        urllib2.install_opener(opener)
+
+        postdata = {"client_id": self.client_id,
+                    "redirect_uri": self.redirect_uri,
+                    "userId": username,
+                    "passwd": password,
+                    "isLoginSina": "0",
+                    "action": "submit",
+                    "response_type": "code",
+                    }
+
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; rv:11.0) Gecko/20100101 Firefox/11.0",
+                   "Host": "api.weibo.com",
+                   "Referer": referer_url
+        }
+        try:
+            req  = urllib2.Request(url = AUTH_URL, data = urllib.urlencode(postdata), headers = headers)
+            resp = urllib2.urlopen(req)
+            code =  resp.geturl()[-32:]
+            r = self.request_access_token(code)
+            self.set_access_token(r.access_token,r.expires_in)
+            return True
+
+        except Exception as e:
+            print e
+            return False
+
     def __getattr__(self, attr):
         return getattr(self.get, attr)
+
